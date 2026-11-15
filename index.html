@@ -84,7 +84,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:#0b0507;overflow:
 (function(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;window.__rfAC=[];
  const W=function(...a){const c=new AC(...a);window.__rfAC.push(c);return c;};W.prototype=AC.prototype;
  window.AudioContext=W;if(window.webkitAudioContext)window.webkitAudioContext=W;})();
-window.RF_BUILD="20261115102926";window.RF_VERSION="1.3.0";
+window.RF_BUILD="20261115103307";window.RF_VERSION="1.3.0";
 // ---- app shell: install prompt, iOS hint, live-update checks
 (function(){
  const A=window.RFApp={deferred:null,installed:false};
@@ -114,7 +114,7 @@ window.RF_BUILD="20261115102926";window.RF_VERSION="1.3.0";
 <script src="index.js"></script>
 <script src="rf.js"></script>
 <script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6722208,"index.wasm":35376909},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6722192,"index.wasm":35376909},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 (function(){
  const canvas=document.getElementById('canvas'),wrap=document.getElementById('wrap');
@@ -150,9 +150,13 @@ const GODOT_THREADS_ENABLED = false;
  ['touchend','pointerup','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{passive:true}));
  engine.startGame({onProgress:(c,t)=>{if(c>0&&t>0){const p=Math.min(100,Math.round(c*100/t));fill.style.width=p+'%';msg.textContent='LOADING '+p+'%  ('+(t/1048576).toFixed(1)+' MB)';}}})
   .then(()=>{ready=true;fill.style.width='100%';msg.textContent=A.standalone()?'':(A.ios?'TIP: INSTALL IT FOR FULL SCREEN':'');go.style.display='block';
-   A.paint();sessionStorage.removeItem('rfReload');
+   A.paint();sessionStorage.removeItem('rfReload');setTimeout(()=>sessionStorage.removeItem('rfSwReload'),15000);
    if(/[?&]autostart/.test(location.search)){tapped=true;finish();}},
    e=>{console.error(e);msg.textContent='Could not start: '+(e&&e.message||e);});
+ // a newer service worker just took over (e.g. first launch after a deploy that changed the worker):
+ // if the player hasn't started yet, restart once so every file comes from the new build
+ if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!tapped&&!sessionStorage.getItem('rfSwReload')){sessionStorage.setItem('rfSwReload','1');location.reload();}});}
  if('serviceWorker' in navigator && window.isSecureContext && !/[?&]nosw/.test(location.search)){
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update().catch(()=>{})).catch(e=>console.warn('sw',e));}
 })();
