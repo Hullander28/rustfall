@@ -1,7 +1,7 @@
 // Rustfall service worker - "always live":
 // every same-origin request goes to the network first (revalidated, so unchanged files are a cheap 304),
 // the cache is only an offline fallback. A new deploy is therefore picked up on the very next launch.
-const BUILD = '20261115184253';
+const BUILD = '20261115184559';
 const CACHE = 'rustfall-' + BUILD;
 const CORE = ['./', 'index.html', 'index.js', 'index.wasm', 'index.pck', 'index.audio.worklet.js', 'rf.js', 'manifest.webmanifest',
   'rf-font.ttf', 'loading-bg.jpg', 'icon-192.png', 'icon-180.png', 'icon-512.png', 'version.json'];
