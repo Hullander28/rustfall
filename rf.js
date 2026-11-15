@@ -29,6 +29,9 @@
     ['keydown', 'keyup', 'keypress'].forEach((ev) => m.addEventListener(ev, (e) => e.stopPropagation()));
     wire(card());
   };
+  RF.openModal = openModal;
+  // Google blocks its sign-in page inside app WebViews, so the Android wrapper app uses email sign-in only.
+  const inWrapper = /RustfallApp\//.test(navigator.userAgent);
   const G_ICON = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.4 28.8c-.5-1.4-.8-3-.8-4.8s.3-3.3.8-4.8l-7.8-6C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.7-4.1-13.6-9.7l-7.8 6C6.6 42.6 14.6 48 24 48z"/></svg>';
   RF.openAccount = () => {
     if (!RF.ready) { openModal('<h2>ACCOUNT</h2><p>Online features are unavailable right now' + (RF.err ? ' (' + RF.err + ')' : '') + '. You can still play; progress saves on this device.</p><button class="alt" id="x">CLOSE</button>', (c) => { c.querySelector('#x').onclick = RF.closeModal; }); return; }
@@ -39,7 +42,8 @@
       return;
     }
     openModal('<h2>SIGN IN</h2><p class="muted">Save progress to the cloud, post leaderboard scores and play online co-op.</p>' +
-      '<button class="g" id="gg">' + G_ICON + '<span>SIGN IN WITH GOOGLE</span></button>' +
+      (inWrapper ? '<p class="muted">Google sign-in only works in a browser (Google blocks it inside apps). Use email here, or <a href="#" id="oc" style="color:#ffb35c">open Rustfall in Chrome</a> to use Google.</p>'
+        : '<button class="g" id="gg">' + G_ICON + '<span>SIGN IN WITH GOOGLE</span></button>') +
       '<div class="muted" style="text-align:center;margin:8px 0">- OR EMAIL -</div>' +
       '<input id="em" type="email" placeholder="Email" autocomplete="email" autocapitalize="off"><input id="pw" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">' +
       '<div class="row"><button id="si">SIGN IN</button><button id="su" class="alt">NEW ACCOUNT</button></div>' +
@@ -48,7 +52,9 @@
       const er = c.querySelector('#er');
       const fail = (e) => { er.textContent = friendly(e); };
       c.querySelector('#x').onclick = RF.closeModal;
-      c.querySelector('#gg').onclick = () => {
+      const oc = c.querySelector('#oc');
+      if (oc) oc.onclick = (e) => { e.preventDefault(); try { window.RustfallAndroid.openExternal(location.origin + location.pathname); } catch (_) { location.href = location.href; } };
+      if (c.querySelector('#gg')) c.querySelector('#gg').onclick = () => {
         er.textContent = '';
         RF._A.signInWithPopup(RF._auth, new RF._A.GoogleAuthProvider()).then(() => RF.closeModal()).catch((e) => {
           if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
