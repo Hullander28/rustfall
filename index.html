@@ -84,7 +84,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:#0b0507;overflow:
 (function(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;window.__rfAC=[];
  const W=function(...a){const c=new AC(...a);window.__rfAC.push(c);return c;};W.prototype=AC.prototype;
  window.AudioContext=W;if(window.webkitAudioContext)window.webkitAudioContext=W;})();
-window.RF_BUILD="20261115184937";window.RF_VERSION="1.4.0";
+window.RF_BUILD="20261116211429";window.RF_VERSION="1.4.1";
 // ---- app shell: install prompt, iOS hint, live-update checks
 (function(){
  const A=window.RFApp={deferred:null,installed:false};
@@ -114,7 +114,7 @@ window.RF_BUILD="20261115184937";window.RF_VERSION="1.4.0";
 <script src="index.js"></script>
 <script src="rf.js"></script>
 <script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8260224,"index.wasm":35376909},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8286064,"index.wasm":35376909},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 (function(){
  const canvas=document.getElementById('canvas'),wrap=document.getElementById('wrap');
