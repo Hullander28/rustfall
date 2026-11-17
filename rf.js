@@ -92,6 +92,45 @@
       inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
     });
   };
+  // ---------------------------------------------------------------- co-op share link
+  const dlm = location.search.match(/[?&]room=([A-Za-z]{4})/);
+  RF.deepRoom = dlm ? dlm[1].toUpperCase() : '';
+  RF.joinDeep = () => {
+    const code = RF.deepRoom;
+    if (!code) return false;
+    // wait until the player has tapped past the loader (audio unlock) before asking
+    if (document.getElementById('loader')) { clearTimeout(RF._deepT); RF._deepT = setTimeout(RF.joinDeep, 400); return true; }
+    RF.deepRoom = '';
+    try { history.replaceState(null, '', location.pathname); } catch (_) {}
+    const go = (c, er) => {
+      if (!RF.roomJoin) { er.textContent = 'Online play is still loading - try again.'; RF.deepRoom = code; return; }
+      er.textContent = 'Joining...';
+      RF.roomJoin(code).then(() => RF.closeModal()).catch((e) => { er.textContent = String(e && e.message || e); });
+    };
+    const signed = RF.user && !RF.user.anon;
+    openModal('<h2>JOIN CO-OP</h2><p class="muted">A friend invited you to room <b>' + code + '</b>.' +
+      (signed ? '' : '<br>Sign in first (Google or email, free) - you will join right after.') + '</p><div class="err" id="er"></div>' +
+      '<div class="row">' + (signed ? '<button id="ok">JOIN ' + code + '</button>' : '<button id="si2">SIGN IN &amp; JOIN</button>') +
+      '<button class="alt" id="x">NOT NOW</button></div>', (c) => {
+      const er = c.querySelector('#er');
+      c.querySelector('#x').onclick = () => { RF.closeModal(); push({t: 'join_cancel'}); };
+      const ok = c.querySelector('#ok'); if (ok) ok.onclick = () => go(c, er);
+      const si = c.querySelector('#si2');
+      if (si) si.onclick = () => { RF._deepAfterAuth = code; RF.closeModal(); RF.openAccount(); };
+    });
+    return true;
+  };
+  RF.shareRoom = (code) => {
+    const url = location.origin + location.pathname + '?room=' + code;
+    const text = 'Join my Rustfall co-op game - room ' + code;
+    const copied = () => { try { window.RFApp && RFApp.toast ? RFApp.toast('Invite link copied!', false) : 0; } catch (_) {} push({t: 'shared', how: 'copy', url}); };
+    const copy = () => (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url) : Promise.reject()).then(copied).catch(() => {
+      try { const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); copied(); }
+      catch (_) { push({t: 'shared', how: 'none', url}); } });
+    if (navigator.share) navigator.share({title: 'Rustfall co-op', text, url}).then(() => push({t: 'shared', how: 'share', url})).catch((e) => { if (!e || e.name !== 'AbortError') copy(); });
+    else copy();
+    return url;
+  };
   // ---------------------------------------------------------------- Firebase
   const nofb = /[?&]nofb/.test(location.search);
   if (nofb) { RF.err = 'disabled'; push({t: 'fb', ok: false}); return; }
@@ -105,6 +144,7 @@
     A.onAuthStateChanged(auth, (u) => {
       RF.user = u ? {uid: u.uid, name: nameOf(u), email: u.email || '', anon: !!u.isAnonymous} : null;
       push({t: 'user', user: RF.user});
+      if (u && !u.isAnonymous && RF._deepAfterAuth) { const c = RF._deepAfterAuth; RF._deepAfterAuth = ''; setTimeout(() => { RF.closeModal(); RF.deepRoom = c; RF.joinDeep(); }, 300); }
     });
     D.onValue(D.ref(db, '.info/connected'), (s) => push({t: 'conn', on: !!s.val()}));
     RF.ready = true; push({t: 'fb', ok: true});
@@ -118,9 +158,20 @@
       if (!RF.user || RF.user.anon) return;
       const ref = r('lb/' + RF.user.uid);
       D.get(ref).then((s) => { const old = s.val(); if (old && old.s >= score) return;
-        return D.set(ref, {n: RF.user.name, s: Math.floor(score), a: Math.max(1, Math.min(4, area | 0)), t: Date.now()}); })
+        return D.set(ref, {n: RF.user.name, s: Math.floor(score), a: Math.max(1, Math.min(6, area | 0)), t: Date.now()}); })
         .then(() => push({t: 'lb_ok'})).catch((e) => push({t: 'lb_err', msg: String(e.message || e)}));
     };
+    // ---- daily challenge board: /rustfall/daily/{YYYY-MM-DD}/{uid}
+    RF.dailySubmit = (date, score, area, cleared) => {
+      if (!RF.user || RF.user.anon || !/^20\d\d-\d\d-\d\d$/.test(date)) return;
+      const ref = r('daily/' + date + '/' + RF.user.uid);
+      D.get(ref).then((s) => { const old = s.val(); if (old && old.s >= score) return;
+        return D.set(ref, {n: RF.user.name, s: Math.floor(score), a: Math.max(1, Math.min(6, area | 0)), c: !!cleared, t: Date.now()}); })
+        .then(() => push({t: 'daily_ok'})).catch((e) => push({t: 'lb_err', msg: String(e.message || e)}));
+    };
+    RF.dailyTop = (date, n) => { D.get(D.query(r('daily/' + date), D.orderByChild('s'), D.limitToLast(n || 10))).then((s) => {
+      const a = []; s.forEach((c) => { a.push(Object.assign({me: !!(RF.user && c.key === RF.user.uid)}, c.val())); }); a.reverse(); push({t: 'daily_lb', rows: a}); })
+      .catch((e) => push({t: 'daily_lb', rows: [], err: String(e.message || e)})); };
     RF.lbTop = (n) => { D.get(D.query(r('lb'), D.orderByChild('s'), D.limitToLast(n || 20))).then((s) => {
       const a = []; s.forEach((c) => { a.push(Object.assign({me: !!(RF.user && c.key === RF.user.uid)}, c.val())); }); a.reverse(); push({t: 'lb', rows: a}); })
       .catch((e) => push({t: 'lb_err', msg: String(e.message || e)})); };
